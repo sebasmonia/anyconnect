@@ -61,7 +61,7 @@ or \"VPN:Off\" depending on status. 'never doesn't show anything."
 (defvar anyconnect--status 'disconnected "VPN connection status, used internally.  Symbol values: connected, disconnected, connecting.")
 (defvar anyconnect--vpncli-output "" "Accumulates the output of the async process used to connect.")
 (defvar anyconnect--connected-marker "state: Connected" "String marker for connection state and output of connection attempt.")
-(defvar anyconnect--connecting-error-marker "Authentication failed." "String marker for failed connection.")
+(defvar anyconnect--connecting-error-marker-regexp "\\(Authentication failed\\|Login failed\\)" "Regexp of  markers for failed connection.")
 
 ;;------------------Package infrastructure----------------------------------------
 
@@ -100,12 +100,14 @@ We know we are done based on certain text markers."
   ;; one where we timed out but might still be running
   (setq anyconnect--vpncli-output (concat anyconnect--vpncli-output output))
   (anyconnect--update-modeline)
-  (when (string-match-p anyconnect--connected-marker output)
+  (when (string-match-p anyconnect--connected-marker
+                        output)
     ;; command completed and we are connected
     (anyconnect--kill-process-and-log)
     (setq anyconnect--status 'connected)
     (anyconnect--message "VPN: Connection successful!"))
-  (when (string-match-p anyconnect--connecting-error-marker output)
+  (when (string-match-p anyconnect--connecting-error-marker-regexp
+                        output)
     ;; command completed but it didn't work
     (anyconnect--message "VPN: ERROR. See log buffer for vpncli output.")
     (anyconnect--kill-process-and-log)
@@ -114,12 +116,12 @@ We know we are done based on certain text markers."
 (defun anyconnect--kill-process-and-log ()
   "Kill the vpncli async process if it is still running.
 Log the process output for debugging."
+  (anyconnect--log "-----\nClosing  vpncli process, output:\n"
+                   anyconnect--vpncli-output
+                   "\n-----")
+  (setq anyconnect--vpncli-output "")
   (when (get-process anyconnect--process-name)
-    (anyconnect--log "-----\nClosing  vpncli process, output:\n"
-                     anyconnect--vpncli-output
-                     "\n-----")
-    (kill-process anyconnect--process-name)
-    (setq anyconnect--vpncli-output "")))
+    (kill-process anyconnect--process-name)))
 
 (defun anyconnect--get-step-value (a-step)
   (let ((func (car a-step))
@@ -192,6 +194,7 @@ Just in case we still think we are connected, but aren't. Also updates the model
   (interactive "P")
   (when refresh-status
     (anyconnect--refresh-state))
+  (anyconnect--update-modeline)
   anyconnect--status)
 
 (defun anyconnect-connect (host-name)
@@ -206,6 +209,25 @@ The list of steps to connect is configured via `anyconnect-steps'."
   (let ((connect-line (format "connect \"%s\"" host-name))
         (commands (mapconcat #'anyconnect--get-step-value  anyconnect-steps "\n")))
     (anyconnect--start-connection (concat connect-line commands "\n"))))
+
+(defun anyconnect-disconnect ()
+  "Close a connection, if one is present."
+  (interactive)
+  (anyconnect--run-command '("disconnect"))
+  (setq anyconnect--status 'disconnected)
+  (anyconnect--update-modeline))
+
+(defun anyconnect-abort ()
+  "If there is some problem while connecting, this funcion resets the process.
+It also logs the output to the log buffer."
+  (interactive)
+  (if (eq anyconnect--status 'connecting)
+      (progn
+        (anyconnect--kill-process-and-log)
+        (setq anyconnect--status 'disconnected)
+        (anyconnect--update-modeline)
+        (anyconnect--message "Connection attempt aborted."))
+    (anyconnect--message "Not connecting right now. Try C-u anyconnect-status to refresh the state.")))
 
 (provide 'anyconnect)
 ;;; anyconnect.el ends here

@@ -31,7 +31,7 @@ collects the output of process used to connect, which is very useful to debug
 
 ## Connection steps setup
 
-Last piece to customize if the alist `anyconnect-steps`, which has the steps to the connection dance. Each element has a function, and a value to pass to it. In the most common cases this will look like the default value:
+Last piece to customize is the alist `anyconnect-steps`, which has the steps to the connection dance. Each element has a function, and a value to pass to it. In the most common cases this will look like the default value:
 ```elisp
  '((identity . "\n")
    (read-string . "Username: ")
@@ -53,13 +53,13 @@ NOTE: A final `\n` is appended to the last step automatically.
 The simplest way to figure out the right value for you is to make a manual call to `vpncli` and note the steps required. On each connection attempt, the ouput of the process will be logged for easy debugging.
 Another example of `anyconnect-steps`:
 ```elisp
- '((identity . "GroupA")
+ '((identity . "\n1")
    (identity . "sebasmonia")
    (read-passwd . "Password: ")
    (identity . "y"))
 ```
 
-These steps would connect to GroupA, use a fixed username, prompt for a single password, and accept the connection banner.
+These steps would connect to the group "1" in the on-screen menu, use a fixed username, prompt for a single password, and accept the connection banner.
 
 # Usage
 
