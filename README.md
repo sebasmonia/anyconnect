@@ -17,7 +17,7 @@ one trip to the mouse. Plus, mode line indicator :)
 
 ## Installation and configuration
 
-Place `anyconnect.el` in your load-path. Or (preferred) install from MELPA.
+Place `anyconnect.el` in your load-path, and `(require 'anyconnect)`. The package is not in MELPA yet, not sure of the wide audience appeal for this.
 
 The next step would be to call `customize-group` for anyconnect.
 
@@ -26,7 +26,7 @@ The next step would be to call `customize-group` for anyconnect.
 2. You can set `anyconnect-modeline-indicator` to specify if you want to see a "VPN" indicator only when
 connected, all the time, or never. The default is `'connected`.
 
-3. By default `anyconnect-log-buffer-name` is "*VPN Log*". This buffer shows timestamped package messages and
+3. By default `anyconnect-log-buffer-name` is `*VPN Log*`. This buffer shows timestamped package messages and
 collects the output of process used to connect, which is very useful to debug
 
 ## Connection steps setup
@@ -63,8 +63,19 @@ These steps would connect to the group "1" in the on-screen menu, use a fixed us
 
 # Usage
 
-`M-x anyconnect-connect`. You will go through you configured steps, get a message for connection success/failure.
+## Commands
 
-`M-x anyconnect-state`. Will show you whether you are `'connected` or `'disconnected`. Use prefix arg to invoke `vpncli` instead of relying on the internal state, in case you had a network hiccup, etc. It also refreshes the mode line.
+`M-x`...
+
+- `anyconnect-connect`: You will go through you configured steps, get a message for connection success/failure. You can also add to your bindings `(anyconnect-connect "Host Name")` to skip mthe host name selection menu, and jump straight to the connection steps.
+
+- `anyconnect-status`: Will show you the current VPN status, and if needed refresh the mode line. Use prefix arg to invoke `vpncli` instead of relying on the internal state, in case you had a network hiccup, etc.
+
+- `anyconnect-disconnect`: to...disconnect.
+
+- `anyconnect-abort`: if after you try connecting the process seems stuck, this will send the vpncli output to the log buffer, and close the process.
 
 
+## Other functions
+
+`anyconnect-connected-p`: As expected, returns `t` if you are connected to the VPN. Call with a true argument to invoke `vpncli` instead of returning the package state.

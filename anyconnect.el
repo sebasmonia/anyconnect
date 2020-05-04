@@ -57,7 +57,8 @@ or \"VPN:Off\" depending on status. 'never doesn't show anything."
   :type 'boolean
   :group 'anyconnect)
 
-(defvar anyconnect--process-name "*VPNCLI*" "Name of the vpncli async process used to connect to the VPN")
+(defvar anyconnect--process-name "*VPNCLI*" "Name of the vpncli async process used to connect to the VPN.")
+(defvar anyconnect--process-buffer-name "*VPNCLI BUF*" "Name of the buffer associated to the vpncli async process.")
 (defvar anyconnect--status 'disconnected "VPN connection status, used internally.  Symbol values: connected, disconnected, connecting.")
 (defvar anyconnect--vpncli-output "" "Accumulates the output of the async process used to connect.")
 (defvar anyconnect--connected-marker "state: Connected" "String marker for connection state and output of connection attempt.")
@@ -87,7 +88,8 @@ Adds a timestamp to each message"
 The output is analyzed in `anyconnect--process-connection-output', eventually killing
 the process."
   (anyconnect--message "VPN: Connecting...")
-  (let ((process (start-process anyconnect--process-name "*VPNCLI BUF*"
+  (let ((process (start-process anyconnect--process-name
+                                anyconnect--process-buffer-name
                                 anyconnect-path "-s")))
     (set-process-filter process #'anyconnect--process-connection-output)
     (setq anyconnect--status 'connecting)
@@ -99,19 +101,19 @@ We know we are done based on certain text markers."
   ;; the test below diffentiates a command being processed from
   ;; one where we timed out but might still be running
   (setq anyconnect--vpncli-output (concat anyconnect--vpncli-output output))
-  (anyconnect--update-modeline)
   (when (string-match-p anyconnect--connected-marker
                         output)
-    ;; command completed and we are connected
-    (anyconnect--kill-process-and-log)
     (setq anyconnect--status 'connected)
-    (anyconnect--message "VPN: Connection successful!"))
+    (anyconnect--message "VPN: Connection successful!")
+    ;; command completed and we are connected
+    (anyconnect--kill-process-and-log))
   (when (string-match-p anyconnect--connecting-error-marker-regexp
                         output)
     ;; command completed but it didn't work
+    (setq anyconnect--status 'disconnected)
     (anyconnect--message "VPN: ERROR. See log buffer for vpncli output.")
-    (anyconnect--kill-process-and-log)
-    (setq anyconnect--status 'disconnected)))
+    (anyconnect--kill-process-and-log))
+  (anyconnect--update-modeline))
 
 (defun anyconnect--kill-process-and-log ()
   "Kill the vpncli async process if it is still running.
@@ -195,7 +197,7 @@ Just in case we still think we are connected, but aren't. Also updates the model
   (when refresh-status
     (anyconnect--refresh-state))
   (anyconnect--update-modeline)
-  anyconnect--status)
+  (anyconnect--message (format "VPN current status: %s" anyconnect--status)))
 
 (defun anyconnect-connect (host-name)
   "Start a connection to the VPN. If HOST-NAME is not specified, it will be prompted.
