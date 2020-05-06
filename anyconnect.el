@@ -64,6 +64,7 @@ or \"VPN:Off\" depending on status. 'never doesn't show anything."
 (defvar anyconnect--connected-marker "state: Connected" "String marker for connection state and output of connection attempt.")
 (defvar anyconnect--connecting-error-marker-regexp "\\(Authentication failed\\|Login failed\\)" "Regexp of  markers for failed connection.")
 (defvar anyconnect--current-connection-name nil "Connection name override provided by the user in `anyconnect-connect', used in the mode line")
+(defvar anyconnect--mode-line-text "" "Text to display in the mode line, based on the values in `anyconnect--current-connection-name' and `anyconnect-modeline-indicator'")
 
 ;;------------------Package infrastructure----------------------------------------
 
@@ -170,37 +171,23 @@ Just in case we still think we are connected, but aren't. Also updates the model
 ;;------------------Modeline indicator--------------------------------------------
 
 (defun anyconnect--update-modeline ()
-  "Updates the mode line lighter, respecting `anyconnect-modeline-indicator'."
-  (let ((clean (anyconnect--clean-modeline-string))
-        (vpn-lighter ""))
-    (cond ((eq anyconnect-modeline-indicator 'always)
-           (setq vpn-lighter (concat
-                              " VPN:"
-                              (if (eq anyconnect--status 'connected)
-                                  (or anyconnect--current-connection-name
-                                      "On")
-                                "Off"))))
-          ((and (eq anyconnect-modeline-indicator 'connected)
-                (eq anyconnect--status 'connected))
-           (setq vpn-lighter (or anyconnect--current-connection-name
-                                 " VPN"))))
-    (setq global-mode-string (concat clean vpn-lighter))))
-
-(defun anyconnect--clean-modeline-string ()
-  "Return `global-mode-string' without the anyconnect indicator."
-  ;; concat to "" to account for the default `nil' value in a simple way
-  (let ((regex-indicator (concat " VPN:?\\(On\\|Off"
-                                 (when anyconnect--current-connection-name
-                                   (concat "\\|" anyconnect--current-connection-name))
-                                 "\\)*"
-                                 (when anyconnect--current-connection-name
-                                   (concat "\\| " anyconnect--current-connection-name))
-                                 )))
-    ;; Pattern can be:
-    ;;" VPN:?\\(On\\|Off\\)*" for no connection name
-    ;;" VPN:?\\(On\\|Off\\|CONN-NAME\\)*\\| CONN-NAME"
-    (replace-regexp-in-string regex-indicator ""
-                              (concat global-mode-string ""))))
+  "Updates the mode line text, respecting `anyconnect-modeline-indicator'.
+It also accounts for `anyconnect--current-connection-name'."
+  (setq anyconnect--mode-line-text
+        (cond
+         ((eq anyconnect-modeline-indicator 'always)
+          (concat
+           " VPN:"
+           (if (eq anyconnect--status 'connected)
+               (or anyconnect--current-connection-name
+                   "On")
+             "Off")))
+         ((and (eq anyconnect-modeline-indicator 'connected)
+               (eq anyconnect--status 'connected))
+          (or anyconnect--current-connection-name
+              " VPN"))
+         (t
+          ""))))
 
 ;;------------------Public API----------------------------------------------------
 
@@ -252,6 +239,8 @@ It also logs the output to the log buffer."
         (setq anyconnect--current-connection-name nil)
         (anyconnect--message "Connection attempt aborted."))
     (anyconnect--message "Not connecting right now. Try C-u anyconnect-status to refresh the state.")))
+
+(push '(:eval anyconnect--mode-line-text) mode-line-misc-info)
 
 (provide 'anyconnect)
 ;;; anyconnect.el ends here
