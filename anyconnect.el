@@ -36,8 +36,8 @@
                               (identity . "y"))
   "Steps to follow to connect to the VPN.
 Each element is a cons cell (Func . \"Param\")."
-  :type '(alist :key-type (symbol :tag "Action")
-                :value-type (string :tag "Value"))
+  :type '(alist :key-type (symbol :tag "Function")
+                :value-type (string :tag "Param"))
   :group 'anyconnect)
 
 (defcustom anyconnect-modeline-indicator 'connected
@@ -63,6 +63,7 @@ or \"VPN:Off\" depending on status. 'never doesn't show anything."
 (defvar anyconnect--vpncli-output "" "Accumulates the output of the async process used to connect.")
 (defvar anyconnect--connected-marker "state: Connected" "String marker for connection state and output of connection attempt.")
 (defvar anyconnect--connecting-error-marker-regexp "\\(Authentication failed\\|Login failed\\)" "Regexp of  markers for failed connection.")
+(defvar anyconnect--current-connection-name nil "Connection name override provided by the user in `anyconnect-connect', used in the mode line")
 
 ;;------------------Package infrastructure----------------------------------------
 
@@ -110,7 +111,8 @@ We know we are done based on certain text markers."
   (when (string-match-p anyconnect--connecting-error-marker-regexp
                         output)
     ;; command completed but it didn't work
-    (setq anyconnect--status 'disconnected)
+    (setq anyconnect--status 'disconnected
+          anyconnect--current-connection-name nil)
     (anyconnect--message "VPN: ERROR. See log buffer for vpncli output.")
     (anyconnect--kill-process-and-log))
   (anyconnect--update-modeline))
@@ -161,27 +163,44 @@ Just in case we still think we are connected, but aren't. Also updates the model
     (if (string-match-p anyconnect--connected-marker
                         output)
         (setq anyconnect--status 'connected)
-      (setq anyconnect--status 'disconnected)))
+      (setq anyconnect--status 'disconnected
+            anyconnect--current-connection-name nil)))
   (anyconnect--update-modeline))
 
 ;;------------------Modeline indicator--------------------------------------------
 
 (defun anyconnect--update-modeline ()
   "Updates the mode line lighter, respecting `anyconnect-modeline-indicator'."
-  ;; concat to "" to account for the default `nil' value in a simple way
-  (let ((clean (replace-regexp-in-string " VPN\\(:On\\|:Off\\)*" ""
-                                         (concat global-mode-string "")))
+  (let ((clean (anyconnect--clean-modeline-string))
         (vpn-lighter ""))
     (cond ((eq anyconnect-modeline-indicator 'always)
            (setq vpn-lighter (concat
                               " VPN:"
                               (if (eq anyconnect--status 'connected)
-                                  "On"
+                                  (or anyconnect--current-connection-name
+                                      "On")
                                 "Off"))))
           ((and (eq anyconnect-modeline-indicator 'connected)
-                (eq anyconnect--status 'connected)
-                (setq vpn-lighter " VPN"))))
+                (eq anyconnect--status 'connected))
+           (setq vpn-lighter (or anyconnect--current-connection-name
+                                 " VPN"))))
     (setq global-mode-string (concat clean vpn-lighter))))
+
+(defun anyconnect--clean-modeline-string ()
+  "Return `global-mode-string' without the anyconnect indicator."
+  ;; concat to "" to account for the default `nil' value in a simple way
+  (let ((regex-indicator (concat " VPN:?\\(On\\|Off"
+                                 (when anyconnect--current-connection-name
+                                   (concat "\\|" anyconnect--current-connection-name))
+                                 "\\)*"
+                                 (when anyconnect--current-connection-name
+                                   (concat "\\| " anyconnect--current-connection-name))
+                                 )))
+    ;; Pattern can be:
+    ;;" VPN:?\\(On\\|Off\\)*" for no connection name
+    ;;" VPN:?\\(On\\|Off\\|CONN-NAME\\)*\\| CONN-NAME"
+    (replace-regexp-in-string regex-indicator ""
+                              (concat global-mode-string ""))))
 
 ;;------------------Public API----------------------------------------------------
 
@@ -199,7 +218,7 @@ Just in case we still think we are connected, but aren't. Also updates the model
   (anyconnect--update-modeline)
   (anyconnect--message (format "VPN current status: %s" anyconnect--status)))
 
-(defun anyconnect-connect (host-name)
+(defun anyconnect-connect (host-name &optional connection-name)
   "Start a connection to the VPN. If HOST-NAME is not specified, it will be prompted.
 The list of steps to connect is configured via `anyconnect-steps'."
   (interactive
@@ -210,6 +229,7 @@ The list of steps to connect is configured via `anyconnect-steps'."
   (anyconnect--update-modeline)
   (let ((connect-line (format "connect \"%s\"" host-name))
         (commands (mapconcat #'anyconnect--get-step-value  anyconnect-steps "\n")))
+    (setq anyconnect--current-connection-name connection-name)
     (anyconnect--start-connection (concat connect-line commands "\n"))))
 
 (defun anyconnect-disconnect ()
@@ -217,7 +237,8 @@ The list of steps to connect is configured via `anyconnect-steps'."
   (interactive)
   (anyconnect--run-command '("disconnect"))
   (setq anyconnect--status 'disconnected)
-  (anyconnect--update-modeline))
+  (anyconnect--update-modeline)
+  (setq anyconnect--current-connection-name nil))
 
 (defun anyconnect-abort ()
   "If there is some problem while connecting, this funcion resets the process.
@@ -228,6 +249,7 @@ It also logs the output to the log buffer."
         (anyconnect--kill-process-and-log)
         (setq anyconnect--status 'disconnected)
         (anyconnect--update-modeline)
+        (setq anyconnect--current-connection-name nil)
         (anyconnect--message "Connection attempt aborted."))
     (anyconnect--message "Not connecting right now. Try C-u anyconnect-status to refresh the state.")))
 
