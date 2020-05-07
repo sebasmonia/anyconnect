@@ -121,10 +121,11 @@ We know we are done based on certain text markers."
 (defun anyconnect--kill-process-and-log ()
   "Kill the vpncli async process if it is still running.
 Log the process output for debugging."
-  (anyconnect--log "-----\nClosing  vpncli process, output:\n"
-                   anyconnect--vpncli-output
-                   "\n-----")
-  (setq anyconnect--vpncli-output "")
+  (when (not (string-empty-p anyconnect--vpncli-output))
+    (anyconnect--log "-----\nClosing vpncli process, output:\n"
+                     anyconnect--vpncli-output
+                     "\n-----")
+    (setq anyconnect--vpncli-output ""))
   (when (get-process anyconnect--process-name)
     (kill-process anyconnect--process-name)))
 
@@ -240,7 +241,7 @@ It also logs the output to the log buffer."
         (anyconnect--message "Connection attempt aborted."))
     (anyconnect--message "Not connecting right now. Try C-u anyconnect-status to refresh the state.")))
 
-(push '(:eval anyconnect--mode-line-text) mode-line-misc-info)
+(push '("" anyconnect--mode-line-text) mode-line-misc-info)
 
 (provide 'anyconnect)
 ;;; anyconnect.el ends here
