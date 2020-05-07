@@ -67,7 +67,7 @@ These steps would connect to the group "1" in the on-screen menu, use a fixed us
 
 `M-x`...
 
-- `anyconnect-connect`: You will go through you configured steps, get a message for connection success/failure. You can also add to your bindings `(anyconnect-connect "Host Name")` to skip mthe host name selection menu, and jump straight to the connection steps.
+- `anyconnect-connect`: You will go through you configured steps, get a message for connection success/failure.
 
 - `anyconnect-status`: Will show you the current VPN status, and if needed refresh the mode line. Use prefix arg to invoke `vpncli` instead of relying on the internal state, in case you had a network hiccup, etc.
 
@@ -78,4 +78,6 @@ These steps would connect to the group "1" in the on-screen menu, use a fixed us
 
 ## Other functions
 
-`anyconnect-connected-p`: As expected, returns `t` if you are connected to the VPN. Call with a true argument to invoke `vpncli` instead of returning the package state.
+- `anyconnect-connected-p`: As expected, returns `t` if you are connected to the VPN. Call with a true argument to invoke `vpncli` instead of returning the package state.
+
+- `anyconnect-connect`: You can add to your bindings `(anyconnect-connect "Host Name" "ConnName")` to skip the host name selection menu, and jump straight to the connection steps. The optional "ConnName" lets you specify a custom string to display in the mode line (either "ConnName" or "VPN:ConnName"), in case you have different configurations.

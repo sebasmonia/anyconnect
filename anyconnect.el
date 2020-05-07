@@ -41,11 +41,13 @@ Each element is a cons cell (Func . \"Param\")."
   :group 'anyconnect)
 
 (defcustom anyconnect-modeline-indicator 'connected
-  "Whether to show a modeline indicator. 'connected (default)
-shows the string \"VPN\" when you are connected. 'always shows \"VPN:On\"
+  "Whether to show a modeline indicator. connected (default)
+shows the string \"VPN\" when you are connected. always shows \"VPN:On\"
 or \"VPN:Off\" depending on status. 'never doesn't show anything."
-  :type 'symbol
-  :group 'anyconnect)
+ :type '(choice (const :tag "Only when connected" connected)
+                 (const :tag "Always" always)
+                 (const :tag "Never" never))
+ :group 'anyconnect)
 
 (defcustom anyconnect-log-buffer-name "*VPN Log*"
   "Name of the anyconnect package log buffer."
