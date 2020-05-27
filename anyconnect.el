@@ -64,7 +64,7 @@ or \"VPN:Off\" depending on status. 'never doesn't show anything."
 (defvar anyconnect--status 'disconnected "VPN connection status, used internally.  Symbol values: connected, disconnected, connecting.")
 (defvar anyconnect--vpncli-output "" "Accumulates the output of the async process used to connect.")
 (defvar anyconnect--connected-marker "state: Connected" "String marker for connection state and output of connection attempt.")
-(defvar anyconnect--connecting-error-marker-regexp "\\(Authentication failed\\|Login failed\\)" "Regexp of  markers for failed connection.")
+(defvar anyconnect--connecting-error-marker-regexp "\\(Authentication failed\\|Login failed\\|Connection attempt has failed\\|Another AnyConnect application is running\\)" "Regexp of  markers for failed connection.")
 (defvar anyconnect--current-connection-name nil "Connection name override provided by the user in `anyconnect-connect', used in the mode line")
 (defvar anyconnect--mode-line-text "" "Text to display in the mode line, based on the values in `anyconnect--current-connection-name' and `anyconnect-modeline-indicator'")
 
@@ -228,7 +228,8 @@ The list of steps to connect is configured via `anyconnect-steps'."
   (anyconnect--run-command '("disconnect"))
   (setq anyconnect--status 'disconnected)
   (anyconnect--update-modeline)
-  (setq anyconnect--current-connection-name nil))
+  (setq anyconnect--current-connection-name nil)
+  (anyconnect--message "VPN: Disconnected."))
 
 (defun anyconnect-abort ()
   "If there is some problem while connecting, this funcion resets the process.
@@ -240,7 +241,7 @@ It also logs the output to the log buffer."
         (setq anyconnect--status 'disconnected)
         (anyconnect--update-modeline)
         (setq anyconnect--current-connection-name nil)
-        (anyconnect--message "Connection attempt aborted."))
+        (anyconnect--message "VPM: Connection attempt aborted."))
     (anyconnect--message "Not connecting right now. Try C-u anyconnect-status to refresh the state.")))
 
 (push '("" anyconnect--mode-line-text) mode-line-misc-info)
